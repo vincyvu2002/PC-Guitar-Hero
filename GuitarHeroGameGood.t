@@ -7,16 +7,17 @@ var MY : array 1 .. 10000 of int
 % Array of the X-position for each line (there are four lines)
 var Lines : array 1 .. 4 of int := init (543, 629, 715, 801)
 
-% Array of the color of each line (there are four lines)
+% Array of colors for the lines (there are four lines)
 var Colors : array 1 .. 4 of int := init (black, red, green, yellow)
 
 tim := 0
 
+% Ball insertion record.
 % Each ball insertion record represents a request to insert a single ball on a specific line, plus a delay to the next ball.
 type BallInsertion :
     record
 	line : int
-	vdelay : int % delay is a reserved word so we use vdelay here
+	delayMs : int
     end record
 
 % Class representing individual balls on screen. The reason to use class instead of
@@ -59,7 +60,7 @@ procedure readInData (fileName : string)
 	    get : fd, line % Remember the first item on a line is the line number ...
 	    ballInsertionRequests (rythIndex).line := line
 	    get : fd, vdelay % ... and the next item is the delay
-	    ballInsertionRequests (rythIndex).vdelay := vdelay
+	    ballInsertionRequests (rythIndex).delayMs := vdelay
 	    rythIndex := rythIndex + 1
 	    if rythIndex > 10000 then
 		exit
@@ -231,8 +232,8 @@ delay (7000)
 for rythIdx : 1 .. 10000
     if ballInsertionRequests (rythIdx).line > 0 then
 	BallControl.introduceNewBall (ballInsertionRequests (rythIdx).line)
-	if ballInsertionRequests (rythIdx).vdelay > 0 then
-	    delay (ballInsertionRequests (rythIdx).vdelay)
+	if ballInsertionRequests (rythIdx).delayMs > 0 then
+	    delay (ballInsertionRequests (rythIdx).delayMs)
 	end if
     end if
 end for

@@ -1,27 +1,27 @@
-setscreen ("graphics:max;max,offscreenonly")
 % Offscreen mode is used to prevent screen flickering during draw by utilising double buffer technique
+setscreen ("graphics:max;max,offscreenonly")
 
 var L1, L2, L3, L4, MY1, MY2, MY3, MY4, Random, tim : int
 var MY : array 1 .. 10000 of int
 
-% Array of X-position of each line (there are four lines)
+% Array of the X-position for each line (there are four lines)
 var Lines : array 1 .. 4 of int := init (543, 629, 715, 801)
 
-% Array of color of each line (there are four lines)
+% Array of the color of each line (there are four lines)
 var Colors : array 1 .. 4 of int := init (black, red, green, yellow)
 
 tim := 0
 
-% Each rythm record represent a single ball on a specific line and a delay (to the next ball)
-type Rythm :
+% Each ball insertion record represents a request to insert a single ball on a specific line, plus a delay to the next ball.
+type BallInsertion :
     record
 	line : int
 	vdelay : int % delay is a reserved word so we use vdelay here
     end record
 
 % Class representing individual balls on screen. The reason to use class instead of
-% the much simpler recrod type is because balls must be dynamically allocated and destroyed
-% at run time. That's the only way turing allows objects to be allocated.
+% the much simpler record type is because balls must be dynamically allocated and destroyed
+% at run time. That's the only way turing allows objects to be dynamically allocated.
 class Ball
     export var Y, var X, var Color
     var Y : int
@@ -29,22 +29,22 @@ class Ball
     var Color : int
 end Ball
 
-% Represents the slots for balls for a single line
+% Represents the slots of balls for a single line
 type LineOfBalls :
     record
-	balls : array 1 .. 10 of pointer to Ball
+	balls : array 1 .. 10 of pointer to Ball % We can have up to 10 balls per line
     end record
 
-% Programmable list of Rythm records, we can have up to 10000 of these
-var rythms : array 1 .. 10000 of Rythm
+% Programmable list of BallInsertion records, we can have up to 10000 of these
+var ballInsertionRequests : array 1 .. 10000 of BallInsertion
 
-% Initialise the rythm records to represent empty record. Here we use line = 0 to represent empty records.
+% Initialise the ball insertion records to represent empty record. Here we use line = 0 to represent empty records.
 for i : 1 .. 10000
-    rythms (i).line := 0
+    ballInsertionRequests (i).line := 0
 end for
 
-% Procedure for reading in rythm data from a file. This allows this program to be driven by data.
-% The data file is a plain text file that contains multiple lines, each representing a single rythm record.
+% Procedure for reading in ball insertion data from a file. This allows this program to be driven by data.
+% The data file is a plain text file that contains multiple lines, each representing a single ball insertion record.
 % Each line must follow this format:
 % <line_number> <delay>
 % E.g. "1 500" meaning insert a new ball on line 1 and wait 500ms before inserting the next ball.
@@ -57,9 +57,9 @@ procedure readInData (fileName : string)
 	loop
 	    exit when eof (fd)
 	    get : fd, line % Remember the first item on a line is the line number ...
-	    rythms (rythIndex).line := line
+	    ballInsertionRequests (rythIndex).line := line
 	    get : fd, vdelay % ... and the next item is the delay
-	    rythms (rythIndex).vdelay := vdelay
+	    ballInsertionRequests (rythIndex).vdelay := vdelay
 	    rythIndex := rythIndex + 1
 	    if rythIndex > 10000 then
 		exit
@@ -102,15 +102,15 @@ monitor BallControl
     % dead-lock.
     procedure _destroyBall (whichLine : int, whichBall : int)
 	if lineOfBalls (whichLine).balls (whichBall) not= nil then
-	    free Ball, lineOfBalls (whichLine).balls (whichBall)
-	    lineOfBalls (whichLine).balls (whichBall) := nil
+	    free Ball, lineOfBalls (whichLine).balls (whichBall) % Free up the memory for the ball (do this or you'll get memory leak)
+	    lineOfBalls (whichLine).balls (whichBall) := nil % and set the slot to nil, meaning an empty slot
 	end if
     end _destroyBall
 
     procedure initialise ()
-	for l : 1 .. 4
+	for lineIdx : 1 .. 4
 	    for i : 1 .. 10
-		lineOfBalls (l).balls (i) := nil
+		lineOfBalls (lineIdx).balls (i) := nil
 	    end for
 	end for
     end initialise
@@ -132,8 +132,14 @@ monitor BallControl
 	for line : 1 .. 4
 	    for ballIdx : 1 .. 10
 		if lineOfBalls (line).balls (ballIdx) not= nil then
+		    % First draw the ball ...
 		    Draw.FillOval (lineOfBalls (line).balls (ballIdx) -> X, lineOfBalls (line).balls (ballIdx) -> Y, 25, 25, lineOfBalls (line).balls (ballIdx) -> Color)
+		    
+		    % ... then move it down the screen ...
 		    MoveBall (lineOfBalls (line).balls (ballIdx))
+		    
+		    % ... finally check to see if the ball had fallen off the bottom of the screen (Y < 0)
+		    % If so destroy the ball.
 		    if lineOfBalls (line).balls (ballIdx) -> Y < 0 then
 			_destroyBall (line, ballIdx)
 		    end if
@@ -210,8 +216,8 @@ BasOutline
 fork song
 BallControl.initialise ()
 
-% Read the data to drive the rythm
-readInData ("rythms.txt")
+% Read the data to drive the ball insertion
+readInData ("balls.txt")
 
 % Fork a background process for displaying the clock
 fork Clock
@@ -220,13 +226,13 @@ fork Clock
 fork UpdateView
 delay (7000)
 
-% Go through the list of the rythm records read in from the data file earlier,
+% Go through the list of the ball insertion records read in from the data file earlier,
 % and execute them, one by one.
 for rythIdx : 1 .. 10000
-    if rythms (rythIdx).line > 0 then
-	BallControl.introduceNewBall (rythms (rythIdx).line)
-	if rythms (rythIdx).vdelay > 0 then
-	    delay (rythms (rythIdx).vdelay)
+    if ballInsertionRequests (rythIdx).line > 0 then
+	BallControl.introduceNewBall (ballInsertionRequests (rythIdx).line)
+	if ballInsertionRequests (rythIdx).vdelay > 0 then
+	    delay (ballInsertionRequests (rythIdx).vdelay)
 	end if
     end if
 end for

@@ -1,8 +1,9 @@
 % Offscreen mode is used to prevent screen flickering during draw by utilising double buffer technique
 setscreen ("graphics:max;max,offscreenonly")
 
-var L1, L2, L3, L4, MY1, MY2, MY3, MY4, Random, tim : int
+var L1, L2, L3, L4, MY1, MY2, MY3, MY4, Random, tim, tim1 : int
 var MY : array 1 .. 10000 of int
+tim1 := 0
 
 % Array of the X-position for each line (there are four lines)
 var Lines : array 1 .. 4 of int := init (543, 629, 715, 801)
@@ -135,10 +136,10 @@ monitor BallControl
 		if lineOfBalls (line).balls (ballIdx) not= nil then
 		    % First draw the ball ...
 		    Draw.FillOval (lineOfBalls (line).balls (ballIdx) -> X, lineOfBalls (line).balls (ballIdx) -> Y, 25, 25, lineOfBalls (line).balls (ballIdx) -> Color)
-		    
+
 		    % ... then move it down the screen ...
 		    MoveBall (lineOfBalls (line).balls (ballIdx))
-		    
+
 		    % ... finally check to see if the ball had fallen off the bottom of the screen (Y < 0)
 		    % If so destroy the ball.
 		    if lineOfBalls (line).balls (ballIdx) -> Y < 0 then
@@ -203,11 +204,17 @@ process song
 end song
 
 process Clock
+var font1 : int
+font1 := Font.New ("Berlin Sans FB:12")
     loop
-	locate (1, 1)
-	put tim
-	delay (1000)
+	if tim = 1000 then
+	    tim1 := tim1 + 1
+	    tim := 0
+	end if
+	delay (1)
 	tim := tim + 1
+	drawfillbox (5,5,50,50,white)
+	Font.Draw (intstr(tim1),10,10,font1,black)
     end loop
 end Clock
 
@@ -217,15 +224,36 @@ BasOutline
 fork song
 BallControl.initialise ()
 
-% Read the data to drive the ball insertion
-readInData ("balls.txt")
-
 % Fork a background process for displaying the clock
 fork Clock
 
 % Fork a background process for updating the view
 fork UpdateView
-delay (7000)
+
+procedure RecordBalls
+    var fd, LastTime : int
+    var ch : string (1)
+    LastTime := tim
+
+    open : fd, "BallTimer.txt", put
+    loop
+	getch (ch)
+	if ch = 'a' then
+	    put : fd, 1, " ", tim - LastTime
+	elsif ch = 's' then
+	    put : fd, 2, " ", tim - LastTime
+	elsif ch = 'd' then
+	    put : fd, 3, " ", tim - LastTime
+	elsif ch = 'f' then
+	    put : fd, 4, " ", tim - LastTime
+	end if
+	exit when ch = 'x'
+	LastTime := tim
+    end loop
+    close : fd
+end RecordBalls
+% Read the data to drive the ball insertion
+readInData ("balls.txt")
 
 % Go through the list of the ball insertion records read in from the data file earlier,
 % and execute them, one by one.
@@ -237,211 +265,5 @@ for rythIdx : 1 .. 10000
 	end if
     end if
 end for
-% BallControl.introduceNewBall (4)
-% delay (500)
-% BallControl.introduceNewBall (4)
-% delay (150)
-% BallControl.introduceNewBall (3)
-% delay (500)
-% BallControl.introduceNewBall (1)
-% BallControl.introduceNewBall (2)
-% delay (200)
-% BallControl.introduceNewBall (1)
-% BallControl.introduceNewBall (2)
-% delay (500)
-% BallControl.introduceNewBall (2)
-% delay (200)
-% BallControl.introduceNewBall (2)
-% delay (500)
-% BallControl.introduceNewBall (4)
-% delay (200)
-% BallControl.introduceNewBall (4)
-% delay (500)
-% BallControl.introduceNewBall (3)
-% delay (200)
-% BallControl.introduceNewBall (2)
-% delay (200)
-% BallControl.introduceNewBall (1)
-% delay (150)
-% BallControl.introduceNewBall (2)
-% delay (750)
-% BallControl.introduceNewBall (3)
-% delay (150)
-% BallControl.introduceNewBall (4)
-% delay (500)
-% BallControl.introduceNewBall (4)
-% delay (510)
-% BallControl.introduceNewBall (1)
-% delay (500)
-% BallControl.introduceNewBall (2)
-% delay (500)
-% BallControl.introduceNewBall (3)
-% delay (250)
-% BallControl.introduceNewBall (4)
-% delay (500)
-% BallControl.introduceNewBall (1)
-% delay (500)
-% BallControl.introduceNewBall (2)
-% delay (250)
-% BallControl.introduceNewBall (1)
-% delay (250)
-% BallControl.introduceNewBall (1)
-% delay (250)
-% BallControl.introduceNewBall (1)
-% delay (250)
-% BallControl.introduceNewBall (1)
-% delay (250)
-% BallControl.introduceNewBall (1)
-% delay (500)
-% BallControl.introduceNewBall (4)
-% delay (750)
-% BallControl.introduceNewBall (4)
-% delay (150)
-% BallControl.introduceNewBall (3)
-% delay (150)
-% BallControl.introduceNewBall (2)
-% delay (150)
-% BallControl.introduceNewBall (1)
-% delay (500)
-% BallControl.introduceNewBall (4)
-% BallControl.introduceNewBall (3)
-% delay (500)
-% BallControl.introduceNewBall (4)
-% BallControl.introduceNewBall (3)
-% delay (250)
-% BallControl.introduceNewBall (3)
-% delay (250)
-% BallControl.introduceNewBall (3)
-% delay (250)
-% BallControl.introduceNewBall (3)
-% delay (500)
-% BallControl.introduceNewBall (4)
-% delay (500)
-% BallControl.introduceNewBall (2)
-% delay (250)
-% BallControl.introduceNewBall (2)
-% delay (250)
-% BallControl.introduceNewBall (2)
-% BallControl.introduceNewBall (3)
-% delay (500)
-% BallControl.introduceNewBall (1)
-% BallControl.introduceNewBall (2)
-% delay (500)
-% BallControl.introduceNewBall (1)
-% BallControl.introduceNewBall (3)
-% delay (750)
-% BallControl.introduceNewBall (3)
-% BallControl.introduceNewBall (2)
-% delay (250)
-% BallControl.introduceNewBall (3)
-% BallControl.introduceNewBall (2)
-% delay (500)
-% BallControl.introduceNewBall (4)
-% BallControl.introduceNewBall (1)
-% delay (250)
-% BallControl.introduceNewBall (4)
-% BallControl.introduceNewBall (1)
-% delay (500)
-% BallControl.introduceNewBall (1)
-% BallControl.introduceNewBall (2)
-% delay (250)
-% BallControl.introduceNewBall (1)
-% BallControl.introduceNewBall (2)
-% delay (500)
-% BallControl.introduceNewBall (4)
-% BallControl.introduceNewBall (1)
-% delay (250)
-% BallControl.introduceNewBall (3)
-% BallControl.introduceNewBall (1)
-% delay (500)
-% BallControl.introduceNewBall (2)
-% BallControl.introduceNewBall (3)
-% delay (250)
-% BallControl.introduceNewBall (2)
-% BallControl.introduceNewBall (3)
-% delay (500)
-% BallControl.introduceNewBall (2)
-% BallControl.introduceNewBall (1)
-% delay (250)
-% BallControl.introduceNewBall (3)
-% BallControl.introduceNewBall (4)
-% delay (750)
-% BallControl.introduceNewBall (2)
-% delay (250)
-% BallControl.introduceNewBall (3)
-% delay (250)
-% BallControl.introduceNewBall (3)
-% delay (250)
-% BallControl.introduceNewBall (2)
-% delay (250)
-% BallControl.introduceNewBall (3)
-% delay (250)
-% BallControl.introduceNewBall (2)
-% delay (250)
-% BallControl.introduceNewBall (3)
-% delay (250)
-% BallControl.introduceNewBall (2)
-% delay (250)
-% BallControl.introduceNewBall (3)
-% delay (250)
-% BallControl.introduceNewBall (4)
-% delay (250)
-% BallControl.introduceNewBall (4)
-% delay (750)
-% BallControl.introduceNewBall (4)
-% delay (250)
-% BallControl.introduceNewBall (4)
-% delay (250)
-% BallControl.introduceNewBall (3)
-% delay (750)
-% BallControl.introduceNewBall (4)
-% delay (250)
-% BallControl.introduceNewBall (4)
-% delay (250)
-% BallControl.introduceNewBall (3)
-% delay (250)
-% BallControl.introduceNewBall (2)
-% delay (250)
-% BallControl.introduceNewBall (2)
-% delay (250)
-% BallControl.introduceNewBall (3)
-% delay (250)
-% BallControl.introduceNewBall (1)
-% delay (750)
-% BallControl.introduceNewBall (1)
-% delay (250)
-% BallControl.introduceNewBall (2)
-% delay (250)
-% BallControl.introduceNewBall (3)
-% delay (250)
-% BallControl.introduceNewBall (4)
-% BallControl.introduceNewBall (3)
-% BallControl.introduceNewBall (2)
-% BallControl.introduceNewBall (1)
-% delay (500)
-% BallControl.introduceNewBall (2)
-% BallControl.introduceNewBall (3)
-% BallControl.introduceNewBall (4)
-% BallControl.introduceNewBall (1)
-% delay (750)
-% BallControl.introduceNewBall (2)
-% delay (250)
-% BallControl.introduceNewBall (3)
-% delay (250)
-% BallControl.introduceNewBall (4)
-% delay (400)
-% BallControl.introduceNewBall (1)
-% BallControl.introduceNewBall (2)
-% BallControl.introduceNewBall (3)
-% delay (500)
-% BallControl.introduceNewBall (1)
-% delay (250)
-% BallControl.introduceNewBall (2)
-% delay (250)
-% BallControl.introduceNewBall (2)
-% delay (250)
-% BallControl.introduceNewBall (3)
-% delay (250)
-% BallControl.introduceNewBall (4)
-% delay (250)
-% BallControl.introduceNewBall (4)
+
+RecordBalls
